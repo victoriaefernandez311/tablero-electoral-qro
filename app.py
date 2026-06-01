@@ -7,258 +7,31 @@ import folium
 from streamlit_folium import st_folium
 import plotly.express as px
 import streamlit.components.v1 as components
+
+from elecciones.ayuntamiento_2018 import generar_informe_control_ayuntamiento_2018
+from elecciones.ayuntamiento_2021 import generar_informe_control_ayuntamiento_2021
+from elecciones.ayuntamiento_2024 import generar_informe_control_ayuntamiento_2024
+from visual.estilos import aplicar_estilos
+from visual.layout import mostrar_titulo_dashboard
+from visual.componentes import (
+    mostrar_kpis,
+    mostrar_top3_candidatos,
+    mostrar_votos_partidos,
+)
+from visual.mapa import (
+    cargar_geojson,
+    crear_mapa_secciones,
+    obtener_color_ganador,
+    seccion_a_texto,
+)
 st.set_page_config(page_title="Tablero Electoral", layout="wide")
+
 
 # ===================================================
 # ESTILOS DEL DASHBOARD
 # ===================================================
-st.markdown("""
-<style>
-.stApp {
-    background-color: #eef7e8;
-    color: #111;
-}
 
-.block-container {
-    padding-top: 0rem !important;
-    padding-left: 0.8rem !important;
-    padding-right: 0.8rem !important;
-    padding-bottom: 0rem !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-/* Filtros claros */
-div[data-baseweb="select"] > div {
-    background-color: #f4faee !important;
-    color: #111 !important;
-    border: 1px solid #9fb79d !important;
-}
-
-div[data-baseweb="select"] span {
-    color: #111 !important;
-}
-
-label {
-    color: #111 !important;
-    font-weight: 800 !important;
-    font-size: 12px !important;
-}
-
-.stSelectbox {
-    background-color: #eaf5df;
-}
-
-/* Header */
-.main-title {
-    font-size: 38px;
-    font-weight: 900;
-    color: #111;
-    line-height: 1;
-    margin-top: 0;
-}
-
-.year-box {
-    background: #cfe3d0;
-    padding: 6px 38px;
-    font-size: 30px;
-    font-weight: 900;
-    color: #173f3a;
-    text-align: center;
-    line-height: 1.1;
-}
-.stApp {
-    background-color: #eef7e8;
-    color: #111;
-}
-
-.block-container {
-    padding-top: 0.4rem;
-    padding-left: 0.8rem;
-    padding-right: 0.8rem;
-    max-width: 100%;
-}
-
-.main-title {
-    font-size: 38px;
-    font-weight: 900;
-    color: #111;
-    line-height: 1;
-    margin-top: 0;
-}
-
-.year-box {
-    background: #cfe3d0;
-    padding: 6px 38px;
-    font-size: 30px;
-    font-weight: 900;
-    color: #173f3a;
-    text-align: center;
-    line-height: 1.1;
-}
-
-.kpi-card {
-    background: white;
-    border-radius: 10px;
-    padding: 12px 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-    height: 62px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.kpi-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 9px;
-    background: #eef3ed;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-}
-
-.kpi-label {
-    font-size: 10px;
-    font-weight: 900;
-    color: #666;
-    text-transform: uppercase;
-}
-
-.kpi-value {
-    font-size: 24px;
-    font-weight: 900;
-    color: #174126;
-}
-
-.result-card {
-    background: white;
-    border-radius: 14px;
-    padding: 12px;
-    min-height: 520px;
-    height: 520px;
-    text-align: center;
-}
-
-.first-card { border: 3px solid #d8bb2f; background:#fffbea; }
-.second-card { border: 3px solid #a8abb0; background:#f7f7f7; }
-.third-card { border: 3px solid #d9822b; background:#fff3e8; }
-
-.result-badge {
-    border-radius: 8px;
-    padding: 8px;
-    font-size: 12px;
-    font-weight: 900;
-    margin-bottom: 12px;
-}
-
-.first-badge { background:#d8bb2f; color:#111; }
-.second-badge { background:#a8abb0; color:white; }
-.third-badge { background:#d9822b; color:white; }
-
-.candidate-name {
-    color:#174126;
-    font-weight:900;
-    font-size:12px;
-    line-height: 1.1;
-    min-height:36px;
-    margin-top:7px;
-}
-
-.party-box {
-    background:#f4f1eb;
-    border-radius:10px;
-    padding:6px;
-    margin-top:6px;
-    font-weight:800;
-    color:#333;
-    font-size:12px;
-}
-.votes-box {
-    background:white;
-    border-radius:10px;
-    border:1px solid #eee;
-    padding:14px;
-    margin-top:18px;
-    min-height:140px;
-}
-
-.votes-title {
-    font-size:8px;
-    color:#555;
-    font-weight:900;
-}
-
-.votes-number {
-    font-size:18px;
-    color:#174126;
-    font-weight:900;
-}
-
-.percent-number {
-    font-size:17px;
-    font-weight:900;
-}
-
-.party-card {
-    background:white;
-    border-radius:14px;
-    padding:14px 14px;
-    margin-bottom:12px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.10);
-
-    height:165px;
-    min-height:165px;
-
-    overflow:hidden;
-
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-}
-.party-name {
-    font-size:13px;
-    font-weight:900;
-    color:#333;
-    line-height:1.1;
-    margin-bottom:8px;
-}
-
-.party-votes {
-    font-size:17px;
-    font-weight:900;
-    color:#111;
-    line-height:1.1;
-}
-
-.party-percent {
-    font-size:18px;
-    font-weight:900;
-    line-height:1;
-    margin-top:10px;
-}
-
-.warning-box {
-    background:#fff3cd;
-    border:1px solid #e3c75f;
-    color:#4b3b00;
-    padding:18px;
-    border-radius:12px;
-    font-weight:800;
-}
-header[data-testid="stHeader"] {
-    display: none !important;
-}
-
-div[data-testid="stToolbar"] {
-    display: none !important;
-}
-
-.block-container {
-    padding-top: 0rem !important;
-}
-</style>
-""", unsafe_allow_html=True)
+aplicar_estilos()
 
 # ===================================================
 # FUNCIONES GENERALES
@@ -276,10 +49,21 @@ def normalizar_columna(col):
     return col
 
 
+def normalizar_texto(valor):
+    valor = str(valor).strip().upper()
+    valor = unicodedata.normalize("NFKD", valor).encode("ASCII", "ignore").decode("utf-8")
+    valor = valor.replace("_", " ")
+    while "  " in valor:
+        valor = valor.replace("  ", " ")
+    return valor.strip()
+
+
 def limpiar_numero(valor):
     if pd.isna(valor):
         return 0
+
     valor = str(valor).strip().replace(",", "").replace("%", "")
+
     try:
         return float(valor)
     except:
@@ -292,8 +76,10 @@ def leer_csv(ruta):
 
     if "NOMBR_FOTO" in df.columns:
         df = df.rename(columns={"NOMBR_FOTO": "NOMBRE_FOTO"})
+
     if "ID_ENTIDAD" in df.columns:
         df = df.rename(columns={"ID_ENTIDAD": "ID_ESTADO"})
+
     if "ID_MUNICIPIO_LOCAL" in df.columns:
         df = df.rename(columns={"ID_MUNICIPIO_LOCAL": "ID_MUNICIPIO"})
 
@@ -305,6 +91,7 @@ def leer_relacion(anio):
         "relaciones/Relacion_Secciones_Electorales.xlsx",
         sheet_name=str(anio)
     )
+
     df_rel.columns = [normalizar_columna(c) for c in df_rel.columns]
 
     if "NOM_MUN" in df_rel.columns:
@@ -329,8 +116,10 @@ def normalizar_partido(valor):
     valor = valor.replace("-", "_").replace(" ", "_")
     valor = valor.replace("QUI", "QI")
     valor = valor.replace("FM", "FXM")
+
     while "__" in valor:
         valor = valor.replace("__", "_")
+
     return valor
 
 
@@ -350,12 +139,20 @@ def obtener_id_municipio(df_filtrado):
     for col in ["CU_MUNICIPIO", "CVE_MUN", "ID_MUNICIPIO"]:
         if col in df_filtrado.columns:
             valores = df_filtrado[col].dropna().unique()
+
             if len(valores) == 1:
                 return int(limpiar_numero(valores[0]))
+
     return None
 
 
-def obtener_candidato(df_candidatos, id_municipio, partido_o_coalicion, tipo_eleccion, municipio_todos=False):
+def obtener_candidato(
+    df_candidatos,
+    id_municipio,
+    partido_o_coalicion,
+    tipo_eleccion,
+    municipio_todos=False
+):
     if df_candidatos.empty:
         return "Sin candidato cargado"
 
@@ -368,9 +165,12 @@ def obtener_candidato(df_candidatos, id_municipio, partido_o_coalicion, tipo_ele
     df_aux["PARTIDO_NORM"] = df_aux["PARTIDO_CI"].apply(normalizar_partido)
 
     if id_municipio is not None and "ID_MUNICIPIO" in df_aux.columns:
-        df_aux = df_aux[df_aux["ID_MUNICIPIO"].apply(limpiar_numero) == id_municipio]
+        df_aux = df_aux[
+            df_aux["ID_MUNICIPIO"].apply(limpiar_numero) == id_municipio
+        ]
 
     encontrado = df_aux[df_aux["PARTIDO_NORM"] == partido_norm]
+
     if not encontrado.empty:
         return encontrado.iloc[0]["CANDIDATO"]
 
@@ -379,22 +179,77 @@ def obtener_candidato(df_candidatos, id_municipio, partido_o_coalicion, tipo_ele
 
     if not encontrados.empty:
         candidatos = encontrados["CANDIDATO"].dropna().unique()
+
         if len(candidatos) == 1:
             return candidatos[0]
+
         return " / ".join(candidatos)
 
     return "Sin candidato cargado"
 
 
 # ===================================================
-# CÁLCULO ELECTORAL
+# TOP 3 FINAL AYUNTAMIENTO
 # ===================================================
 
-def calcular_resultados_candidatos(df_filtrado, df_candidatos, tipo_eleccion, id_municipio):
+@st.cache_data(show_spinner=False)
+def cargar_informes_ayuntamiento(anio):
+    if anio == 2018:
+        return generar_informe_control_ayuntamiento_2018()
+
+    if anio == 2021:
+        return generar_informe_control_ayuntamiento_2021()
+
+    if anio == 2024:
+        return generar_informe_control_ayuntamiento_2024()
+
+    return []
+
+
+def obtener_top3_final_ayuntamiento(anio, municipio):
+    """
+    Devuelve el TOP3_FINAL de Ayuntamiento usando los módulos electorales.
+
+    TOP1 viene del CSV oficial de ganadores.
+    TOP2 y TOP3 vienen calculados desde la sábana, sin duplicar TOP1.
+    """
+
+    if municipio == "Todos":
+        return []
+
+    informes = cargar_informes_ayuntamiento(anio)
+    municipio_norm = normalizar_texto(municipio)
+
+    for informe in informes:
+        municipio_informe_norm = normalizar_texto(informe["MUNICIPIO"])
+
+        if municipio_informe_norm == municipio_norm:
+            return informe.get("TOP3_FINAL", [])
+
+    return []
+
+
+# ===================================================
+# CÁLCULO ELECTORAL VIEJO
+# Se mantiene para Gobernatura y para casos generales.
+# ===================================================
+
+def calcular_resultados_candidatos(
+    df_filtrado,
+    df_candidatos,
+    tipo_eleccion,
+    id_municipio
+):
     df_cand = df_candidatos.copy()
 
-    if tipo_eleccion == "Ayuntamiento" and id_municipio is not None and "ID_MUNICIPIO" in df_cand.columns:
-        df_cand = df_cand[df_cand["ID_MUNICIPIO"].apply(limpiar_numero) == id_municipio]
+    if (
+        tipo_eleccion == "Ayuntamiento"
+        and id_municipio is not None
+        and "ID_MUNICIPIO" in df_cand.columns
+    ):
+        df_cand = df_cand[
+            df_cand["ID_MUNICIPIO"].apply(limpiar_numero) == id_municipio
+        ]
 
     resultados = []
 
@@ -402,6 +257,7 @@ def calcular_resultados_candidatos(df_filtrado, df_candidatos, tipo_eleccion, id
         partidos_originales = grupo["PARTIDO_CI"].dropna().unique().tolist()
 
         componentes = set()
+
         for p in partidos_originales:
             componentes.update(componentes_partido(p))
 
@@ -418,6 +274,7 @@ def calcular_resultados_candidatos(df_filtrado, df_candidatos, tipo_eleccion, id
 
             if partes_col and partes_col.issubset(componentes):
                 votos_col = df_filtrado[col].apply(limpiar_numero).sum()
+
                 if votos_col > 0:
                     votos_total += votos_col
                     columnas_usadas.append(col_norm)
@@ -435,11 +292,34 @@ def calcular_resultados_candidatos(df_filtrado, df_candidatos, tipo_eleccion, id
 
 def tabla_partidos(df_filtrado):
     columnas_posibles = [
-        "PAN", "PRI", "PRD", "MC", "PVEM", "MORENA", "PT", "QI", "PES", "RSP", "FXM", "QS",
-        "PRI_PVEM", "PAN_QI", "PAN_QUI", "PAN_PRD", "PAN_PRD_MC",
-        "MORENA_PT", "MORENA_PT_PES", "PVEM_MORENA_PT", "PVEM_MORENA",
-        "PAN_PRI_PRD", "PAN_PRI", "PAN_PRD", "PRI_PRD",
-        "CNR", "NULOS", "VOTOS_NULOS", "OTROS"
+        "PAN",
+        "PRI",
+        "PRD",
+        "MC",
+        "PVEM",
+        "MORENA",
+        "PT",
+        "QI",
+        "PES",
+        "RSP",
+        "FXM",
+        "QS",
+        "PRI_PVEM",
+        "PAN_QI",
+        "PAN_QUI",
+        "PAN_PRD",
+        "PAN_PRD_MC",
+        "MORENA_PT",
+        "MORENA_PT_PES",
+        "PVEM_MORENA_PT",
+        "PVEM_MORENA",
+        "PAN_PRI_PRD",
+        "PAN_PRI",
+        "PRI_PRD",
+        "CNR",
+        "NULOS",
+        "VOTOS_NULOS",
+        "OTROS"
     ]
 
     datos = []
@@ -448,6 +328,7 @@ def tabla_partidos(df_filtrado):
     for col in columnas_posibles:
         if col in df_filtrado.columns:
             votos = df_filtrado[col].apply(limpiar_numero).sum()
+
             if votos > 0:
                 datos.append({
                     "Partido / Candidatura": col,
@@ -464,189 +345,10 @@ def tabla_partidos(df_filtrado):
 
 
 # ===================================================
-# MAPA
 # ===================================================
-
-COLORES_PARTIDOS = {
-    "PAN": "#005596",
-    "PRI": "#00953B",
-    "MORENA": "#B31934",
-    "PRD": "#FFD700",
-    "PVEM": "#00A650",
-    "MC": "#FF8200",
-    "PT": "#E03E2D",
-    "PRI_PVEM": "#006B3F",
-    "PAN_PRD": "#004B87",
-    "MORENA_PT_PES": "#701A1A",
-    "PAN_QI": "#005596",
-    "PAN_QUI": "#005596",
-    "PAN_PRD_MC": "#004B87",
-    "MORENA_PT": "#701A1A",
-    "PVEM_MORENA_PT": "#701A1A",
-    "INDEPENDIENTE": "#808080",
-    "OTROS": "#D3D3D3"
-}
-
-ARCHIVOS_MAPAS = {
-    2018: "mapas/secciones_2018.json",
-    2021: "mapas/secciones_2021.json",
-    2024: "mapas/secciones_2024.json"
-}
-
-
-def seccion_a_texto(valor):
-    try:
-        return str(int(float(valor))).zfill(4)
-    except:
-        return str(valor).zfill(4)
-
-
-def cargar_geojson(anio):
-    with open(ARCHIVOS_MAPAS[anio], "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def obtener_color_ganador(ganador):
-    ganador_norm = normalizar_partido(ganador)
-    return COLORES_PARTIDOS.get(ganador_norm, "#CFCFCF")
-
-
-def extraer_bounds_geojson(geojson_data):
-    lats = []
-    lons = []
-
-    def recorrer(coords):
-        if isinstance(coords[0], (int, float)):
-            lon, lat = coords
-            lats.append(lat)
-            lons.append(lon)
-        else:
-            for c in coords:
-                recorrer(c)
-
-    for feature in geojson_data["features"]:
-        recorrer(feature["geometry"]["coordinates"])
-
-    if not lats or not lons:
-        return None
-
-    return [[min(lats), min(lons)], [max(lats), max(lons)]]
-
-
-def crear_mapa_secciones(geojson_data, df_mapa, seccion_seleccionada, df_candidatos, tipo_eleccion):
-    df_aux = df_mapa.copy()
-    df_aux["SECCION_TXT"] = df_aux["SECCION"].apply(seccion_a_texto)
-    secciones_visibles = set(df_aux["SECCION_TXT"].unique())
-
-    info_secciones = {}
-
-    for _, row in df_aux.iterrows():
-        sec = seccion_a_texto(row["SECCION"])
-        ganador = row["1ER_LUGAR"] if "1ER_LUGAR" in row.index else "OTROS"
-
-        votos_ganador = 0
-        if "1ERO_VOTOS" in row.index:
-            votos_ganador = limpiar_numero(row["1ERO_VOTOS"])
-        elif "VOTOS" in row.index:
-            votos_ganador = limpiar_numero(row["VOTOS"])
-
-        id_mun = None
-        for col in ["CU_MUNICIPIO", "CVE_MUN", "ID_MUNICIPIO"]:
-            if col in row.index:
-                id_mun = int(limpiar_numero(row[col]))
-                break
-
-        candidato = obtener_candidato(
-            df_candidatos=df_candidatos,
-            id_municipio=id_mun,
-            partido_o_coalicion=ganador,
-            tipo_eleccion=tipo_eleccion,
-            municipio_todos=False
-        )
-
-        info_secciones[sec] = {
-            "GANADOR": ganador,
-            "CANDIDATO": candidato,
-            "VOTOS_GANADOR": int(votos_ganador),
-            "LISTA_NOMINAL": int(limpiar_numero(row.get("LISTA_NOMINAL", 0))),
-            "VOTOS_EMITIDOS": int(limpiar_numero(row.get("VOTOS_EMITIDOS", row.get("TOT_VOTOS", 0)))),
-            "NULOS": int(limpiar_numero(row.get("VOTOS_NULOS", row.get("NULOS", 0))))
-        }
-
-    geojson_filtrado = copy.deepcopy(geojson_data)
-    geojson_filtrado["features"] = [
-        feature for feature in geojson_filtrado["features"]
-        if seccion_a_texto(feature["properties"]["SECCION"]) in secciones_visibles
-    ]
-
-    for feature in geojson_filtrado["features"]:
-        sec_geo = seccion_a_texto(feature["properties"]["SECCION"])
-        info = info_secciones.get(sec_geo, {})
-
-        feature["properties"]["SECCION_TXT"] = sec_geo
-        feature["properties"]["GANADOR"] = info.get("GANADOR", "Sin datos")
-        feature["properties"]["CANDIDATO"] = info.get("CANDIDATO", "Sin datos")
-        feature["properties"]["VOTOS_GANADOR"] = info.get("VOTOS_GANADOR", 0)
-        feature["properties"]["LISTA_NOMINAL"] = info.get("LISTA_NOMINAL", 0)
-        feature["properties"]["VOTOS_EMITIDOS"] = info.get("VOTOS_EMITIDOS", 0)
-        feature["properties"]["NULOS"] = info.get("NULOS", 0)
-
-    mapa = folium.Map(location=[20.6, -100.4], zoom_start=8, tiles="cartodbpositron")
-
-    def style_function(feature):
-        sec_geo = feature["properties"]["SECCION_TXT"]
-        ganador = feature["properties"].get("GANADOR", "OTROS")
-        color = obtener_color_ganador(ganador)
-
-        if seccion_seleccionada != "Todos" and sec_geo == seccion_a_texto(seccion_seleccionada):
-            return {
-                "fillColor": color,
-                "color": "#000000",
-                "weight": 4,
-                "fillOpacity": 0.9
-            }
-
-        return {
-            "fillColor": color,
-            "color": "#555555",
-            "weight": 0.7,
-            "fillOpacity": 0.65
-        }
-
-    folium.GeoJson(
-        geojson_filtrado,
-        style_function=style_function,
-        tooltip=folium.GeoJsonTooltip(
-            fields=[
-                "SECCION_TXT",
-                "GANADOR",
-                "VOTOS_GANADOR"
-            ],
-            aliases=[
-                "Sección:",
-                "Ganador:",
-                "Votos:"
-            ],
-            localize=True,
-            sticky=False,
-            labels=True,
-            style="""
-                background-color: white;
-                border: 1px solid #ccc;
-                border-radius: 6px;
-                box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
-                font-size: 10px;
-                padding: 4px;
-            """
-        )
-    ).add_to(mapa)
-
-    bounds = extraer_bounds_geojson(geojson_filtrado)
-    if bounds:
-        mapa.fit_bounds(bounds, padding=[12, 12])
-
-    return mapa
-
+# MAPA
+# Las funciones del mapa se importan desde visual/mapa.py
+# ===================================================
 
 # ===================================================
 # ARCHIVOS
@@ -666,24 +368,13 @@ ARCHIVOS_CANDIDATOS = {
     ("Gobernatura", 2021): "candidatos/candidatos_gobernatura_2021.csv"
 }
 
+
 # ===================================================
 # CARGA Y FILTROS
 # ===================================================
 
-st.markdown(
-    """
-    <h1 style="
-        text-align:center;
-        font-size:42px;
-        font-weight:900;
-        color:#111;
-        margin:0 0 8px 0;
-    ">
-        TABLERO ELECTORAL
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
+mostrar_titulo_dashboard()
+
 
 # -------------------------------
 # Filtros principales
@@ -705,16 +396,24 @@ with f_anio:
     else:
         anio = st.selectbox("Año", [2018, 2021, 2024], key="anio_ayun")
 
+
 df = leer_csv(ARCHIVOS_DATOS[(tipo_eleccion, anio)])
 df = preparar_datos(df)
+
 df_candidatos = leer_csv(ARCHIVOS_CANDIDATOS[(tipo_eleccion, anio)])
 df_rel = leer_relacion(anio)
 
-df_final = df.merge(df_rel, on="SECCION", how="left", suffixes=("", "_REL"))
+df_final = df.merge(
+    df_rel,
+    on="SECCION",
+    how="left",
+    suffixes=("", "_REL")
+)
 
 distrito = "Todos"
 municipio = "Todos"
 seccion = "Todos"
+
 
 # ===================================================
 # HEADER ELECCIÓN + FILTROS SECUNDARIOS
@@ -745,32 +444,6 @@ if tipo_eleccion == "Gobernatura":
 
     for d in distritos_reales:
         df_d = df_final[df_final["DISTRITO_LOCAL"] == d]
-        nombre = df_d["MUNICIPIO"].dropna().iloc[0]
-        etiqueta = f"{nombre} {int(float(d))}"
-        opciones_distrito.append(etiqueta)
-        mapa_distritos[etiqueta] = d
-
-    with h_dist:
-        distrito_label = st.selectbox(
-            "Distritos",
-            opciones_distrito,
-            key="filtro_distrito_gob"
-        )
-
-    distrito = mapa_distritos[distrito_label]
-
-    if distrito != "Todos":
-        df_final = df_final[df_final["DISTRITO_LOCAL"] == distrito]
-
-    # Formato visual tipo: CADEREYTA DE MONTES 14
-    opciones_distrito = ["Todos"]
-    mapa_distritos = {"Todos": "Todos"}
-
-    for d in distritos_reales:
-        if d == "Todos":
-            continue
-
-        df_d = df_final[df_final["DISTRITO_LOCAL"] == d]
         municipios_d = df_d["MUNICIPIO"].dropna().unique()
 
         if len(municipios_d) > 0:
@@ -782,6 +455,12 @@ if tipo_eleccion == "Gobernatura":
         opciones_distrito.append(etiqueta)
         mapa_distritos[etiqueta] = d
 
+    with h_dist:
+        distrito_label = st.selectbox(
+            "Distritos",
+            opciones_distrito,
+            key="filtro_distrito_gob"
+        )
 
     distrito = mapa_distritos[distrito_label]
 
@@ -806,247 +485,238 @@ else:
             unsafe_allow_html=True
         )
 
-    municipios = ["Todos"] + sorted(df_final["MUNICIPIO"].dropna().unique())
+    df_ayuntamiento_base = df_final.copy()
 
-    if "municipio_mapa" in st.session_state and st.session_state["municipio_mapa"] in municipios:
-        indice_municipio = municipios.index(st.session_state["municipio_mapa"])
+    # ===================================================
+    # OPCIONES BASE
+    # ===================================================
+
+    municipios_base = (
+        df_ayuntamiento_base["MUNICIPIO"]
+        .dropna()
+        .sort_values()
+        .unique()
+        .tolist()
+    )
+
+    opciones_municipio_base = ["Todos"] + municipios_base
+
+    def formato_municipio(valor):
+        if valor == "Todos":
+            return "🔎 Todos / buscar municipio..."
+        return valor
+
+    def formato_seccion(valor):
+        if valor == "Todos":
+            return "🔎 Todas / buscar sección..."
+        return valor
+
+    # ===================================================
+    # ESTADO ACTUAL
+    # ===================================================
+
+    municipio_actual = st.session_state.get("filtro_municipio", "Todos")
+    seccion_actual = st.session_state.get("filtro_seccion", "Todos")
+
+    if municipio_actual not in opciones_municipio_base:
+        municipio_actual = "Todos"
+
+    # ===================================================
+    # SI HAY SECCIÓN SELECCIONADA, ESA SECCIÓN MANDA
+    # ===================================================
+
+    if seccion_actual != "Todos":
+        df_seccion_actual = df_ayuntamiento_base[
+            df_ayuntamiento_base["SECCION"].astype(int) == int(seccion_actual)
+        ].copy()
+
+        municipios_de_seccion = (
+            df_seccion_actual["MUNICIPIO"]
+            .dropna()
+            .sort_values()
+            .unique()
+            .tolist()
+        )
+
+        if municipios_de_seccion:
+            municipio_actual = municipios_de_seccion[0]
+        else:
+            municipio_actual = "Todos"
+
+    # ===================================================
+    # FILTRO MUNICIPIO
+    # ===================================================
+
+    if seccion_actual != "Todos" and municipio_actual != "Todos":
+        opciones_municipio = [municipio_actual]
+        index_municipio = 0
+        municipio_disabled = True
     else:
-        indice_municipio = 0
+        opciones_municipio = opciones_municipio_base
+        index_municipio = (
+            opciones_municipio.index(municipio_actual)
+            if municipio_actual in opciones_municipio
+            else 0
+        )
+        municipio_disabled = False
 
     with h_mun:
-        municipio = st.selectbox(
+        municipio_seleccionado = st.selectbox(
             "Municipio",
-            municipios,
-            index=indice_municipio,
-            key="filtro_municipio"
+            opciones_municipio,
+            index=index_municipio,
+            format_func=formato_municipio,
+            key="filtro_municipio",
+            disabled=municipio_disabled
         )
+
+    municipio = municipio_seleccionado
+
+    # ===================================================
+    # FILTRO SECCIÓN
+    # Si hay municipio seleccionado, muestra solo secciones de ese municipio.
+    # Si municipio es Todos, muestra todas las secciones.
+    # ===================================================
+
+    if municipio != "Todos":
+        df_para_secciones = df_ayuntamiento_base[
+            df_ayuntamiento_base["MUNICIPIO"] == municipio
+        ].copy()
+    else:
+        df_para_secciones = df_ayuntamiento_base.copy()
+
+    secciones_disponibles = (
+        df_para_secciones["SECCION"]
+        .dropna()
+        .astype(int)
+        .sort_values()
+        .unique()
+        .tolist()
+    )
+
+    opciones_seccion = ["Todos"] + [
+        str(int(seccion_valor)).zfill(4)
+        for seccion_valor in secciones_disponibles
+    ]
+
+    if seccion_actual not in opciones_seccion:
+        seccion_actual = "Todos"
+
+    index_seccion = opciones_seccion.index(seccion_actual)
+
+    with h_sec:
+        seccion_seleccionada = st.selectbox(
+            "Sección electoral",
+            opciones_seccion,
+            index=index_seccion,
+            format_func=formato_seccion,
+            key="filtro_seccion"
+        )
+
+    seccion = seccion_seleccionada
+
+    # ===================================================
+    # SI SELECCIONÓ UNA SECCIÓN, AJUSTAMOS MUNICIPIO FINAL
+    # ===================================================
+
+    if seccion != "Todos":
+        df_seccion = df_ayuntamiento_base[
+            df_ayuntamiento_base["SECCION"].astype(int) == int(seccion)
+        ].copy()
+
+        municipios_de_seccion = (
+            df_seccion["MUNICIPIO"]
+            .dropna()
+            .sort_values()
+            .unique()
+            .tolist()
+        )
+
+        if municipios_de_seccion:
+            municipio = municipios_de_seccion[0]
+
+    # ===================================================
+    # APLICACIÓN DE FILTROS
+    # ===================================================
+
+    df_final = df_ayuntamiento_base.copy()
 
     if municipio != "Todos":
         df_final = df_final[df_final["MUNICIPIO"] == municipio]
 
-    secciones = ["Todos"] + sorted(df_final["SECCION"].dropna().unique())
-
-    if "seccion_mapa" in st.session_state and st.session_state["seccion_mapa"] in secciones:
-        indice_seccion = secciones.index(st.session_state["seccion_mapa"])
-    else:
-        indice_seccion = 0
-
-    with h_sec:
-        seccion = st.selectbox(
-            "Sección electoral",
-            secciones,
-            index=indice_seccion,
-            key="filtro_seccion"
-        )
-
     if seccion != "Todos":
-        df_final = df_final[df_final["SECCION"] == seccion]
-
+        df_final = df_final[
+            df_final["SECCION"].astype(int) == int(seccion)
+        ]
 df_filtrado = df_final.copy()
 
 if df_filtrado.empty:
     st.error("No hay datos para la selección actual.")
     st.stop()
 
+
 # ===================================================
 # KPIs
 # ===================================================
 
 lista_nominal = valor_columna_sumada(df_filtrado, ["LISTA_NOMINAL"])
-votos_emitidos = valor_columna_sumada(df_filtrado, ["VOTOS_EMITIDOS", "VOTOS_EMITIDOS_1", "TOT_VOTOS"])
+votos_emitidos = valor_columna_sumada(
+    df_filtrado,
+    ["VOTOS_EMITIDOS", "VOTOS_EMITIDOS_1", "TOT_VOTOS"]
+)
 votos_nulos = valor_columna_sumada(df_filtrado, ["VOTOS_NULOS", "NULOS"])
 participacion = (votos_emitidos / lista_nominal) * 100 if lista_nominal > 0 else 0
 
-k1, k2, k3, k4 = st.columns(4)
-
-kpis = [
-    ("👥", "Lista nominal", lista_nominal),
-    ("🗳️", "Votos emitidos", votos_emitidos),
-    ("❌", "Votos nulos", votos_nulos),
-    ("📊", "Participación", participacion)
-]
-
-for col, (icono, label, value) in zip([k1, k2, k3, k4], kpis):
-    with col:
-        valor = f"{value:.2f}%" if label == "Participación" else f"{int(value):,}"
-
-        st.markdown(
-            f"""
-            <div class="kpi-card">
-                <div class="kpi-icon">{icono}</div>
-                <div>
-                    <div class="kpi-label">{label}</div>
-                    <div class="kpi-value">{valor}</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
+mostrar_kpis(
+    lista_nominal=lista_nominal,
+    votos_emitidos=votos_emitidos,
+    votos_nulos=votos_nulos,
+    participacion=participacion
+)
 # ===================================================
 # RESULTADOS
 # ===================================================
 
 id_municipio = obtener_id_municipio(df_filtrado)
 
-resultados = calcular_resultados_candidatos(
+resultados_calculados = calcular_resultados_candidatos(
     df_filtrado=df_filtrado,
     df_candidatos=df_candidatos,
     tipo_eleccion=tipo_eleccion,
     id_municipio=id_municipio
 )
 
+if tipo_eleccion == "Ayuntamiento" and municipio != "Todos" and seccion == "Todos":
+    resultados = obtener_top3_final_ayuntamiento(anio, municipio)
+else:
+    resultados = resultados_calculados
+
 df_partidos = tabla_partidos(df_filtrado)
 
 layout_left, layout_mid, layout_map = st.columns([1.45, 0.95, 1.2])
+
+
 # ===================================================
 # TOP 3
 # ===================================================
 
 with layout_left:
-    st.markdown("### TOP 3 CANDIDATOS")
+    mostrar_top3_candidatos(
+        resultados=resultados,
+        votos_emitidos=votos_emitidos,
+        tipo_eleccion=tipo_eleccion,
+        municipio=municipio
+    )
 
-    if tipo_eleccion == "Ayuntamiento" and municipio == "Todos":
-        st.warning("Seleccione un municipio para ver los candidatos.")
-    else:
-        c1, c2, c3 = st.columns(3)
-        cols = [c1, c2, c3]
-
-        clases = [
-            ("PRIMER LUGAR", "#d8bb2f", "#fffbea"),
-            ("SEGUNDO LUGAR", "#a8abb0", "#f7f7f7"),
-            ("TERCER LUGAR", "#d9822b", "#fff3e8")
-        ]
-
-        for i in range(3):
-            if i < len(resultados):
-                r = resultados[i]
-                pct = (r["VOTOS"] / votos_emitidos * 100) if votos_emitidos > 0 else 0
-
-                titulo, color, fondo = clases[i]
-
-                html_card = f"""
-                <div style="
-                    background:{fondo};
-                    border:3px solid {color};
-                    border-radius:14px;
-                    padding:8px;
-                    height:520px;
-                    text-align:center;
-                    font-family:Arial;
-                    box-sizing:border-box;
-                ">
-                    <div style="
-                        background:{color};
-                        color:#111;
-                        border-radius:8px;
-                        padding:7px;
-                        font-size:11px;
-                        font-weight:900;
-                        margin-bottom:8px;
-                    ">
-                        {titulo}
-                    </div>
-
-                    <div style="
-                        height:170px;
-                        background:#f8f8f8;
-                        border-radius:10px;
-                        border:1px solid #ddd;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#999;
-                        font-weight:800;
-                        font-size:11px;
-                        margin-bottom:8px;
-                    ">
-                        FOTO
-                    </div>
-
-                    <div style="
-                        color:#174126;
-                        font-weight:900;
-                        font-size:12px;
-                        line-height:1.1;
-                        min-height:40px;
-                        margin-bottom:8px;
-                    ">
-                        {r['CANDIDATO']}
-                    </div>
-
-                    <div style="
-                        background:#f4f1eb;
-                        border-radius:10px;
-                        padding:7px;
-                        font-weight:800;
-                        color:#333;
-                        font-size:11px;
-                        margin-bottom:8px;
-                    ">
-                        {r['PARTIDOS']}
-                    </div>
-
-                    <div style="
-                        background:white;
-                        border-radius:10px;
-                        border:1px solid #eee;
-                        padding:8px;
-                    ">
-                        <div style="font-size:8px;color:#555;font-weight:900;">
-                            VOTOS TOTALES
-                        </div>
-                        <div style="font-size:20px;color:#174126;font-weight:900;">
-                            {int(r['VOTOS']):,}
-                        </div>
-                        <hr style="margin:5px 0;">
-                        <div style="font-size:8px;color:#555;font-weight:900;">
-                            PORCENTAJE
-                        </div>
-                        <div style="font-size:18px;font-weight:900;">
-                            {pct:.1f}%
-                        </div>
-                    </div>
-                </div>
-                """
-
-                with cols[i]:
-                    components.html(html_card, height=540)
 # ===================================================
 # VOTOS POR PARTIDOS
 # ===================================================
 
 with layout_mid:
-    st.markdown("### Votos por partidos políticos")
-
-    partidos_mostrar = df_partidos.head(6).reset_index(drop=True)
-
-    for i in range(0, len(partidos_mostrar), 2):
-        pc1, pc2 = st.columns(2)
-
-        for col_card, idx in zip([pc1, pc2], [i, i + 1]):
-            if idx < len(partidos_mostrar):
-                row = partidos_mostrar.iloc[idx]
-                partido = row["Partido / Candidatura"]
-                votos = row["Votos"]
-                pct = row["Porcentaje"]
-                color = obtener_color_ganador(partido)
-
-                with col_card:
-                    st.markdown(
-                        f"""
-                        <div class="party-card">
-                            <div class="party-name">{partido}</div>
-                            <div class="party-votes">{votos:,}</div>
-                            <div style="height:10px;background:#ddd;border-radius:10px;margin-top:4px;">
-                                <div style="height:6px;width:{min(pct,100)}%;background:{color};border-radius:6px;"></div>
-                            </div>
-                            <div class="party-percent" style="color:{color};">{pct:.1f}%</div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
+    mostrar_votos_partidos(
+        df_partidos=df_partidos,
+        obtener_color_ganador=obtener_color_ganador
+    )
 # ===================================================
 # MAPA
 # ===================================================
@@ -1060,13 +730,15 @@ with layout_map:
         geojson_data=geojson_data,
         df_mapa=df_filtrado,
         seccion_seleccionada=seccion,
+        obtener_candidato_func=obtener_candidato,
         df_candidatos=df_candidatos,
-        tipo_eleccion=tipo_eleccion
+        tipo_eleccion=tipo_eleccion,
+        limpiar_numero_func=limpiar_numero,
     )
 
     st_folium(
         mapa,
-        width=520,
-        height=445,
+        height=485,
+        use_container_width=True,
         returned_objects=[]
     )
